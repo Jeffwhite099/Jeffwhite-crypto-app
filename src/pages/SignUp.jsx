@@ -8,6 +8,7 @@ import Button from "../components/ui/Button";
 function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ function SignUp() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("http://localhost:5000/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -28,7 +29,7 @@ function SignUp() {
         body: JSON.stringify({
           name,
           email,
-          accountType,
+          password,
         }),
       });
 
@@ -67,6 +68,15 @@ function SignUp() {
           placeholder="Your email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <AuthInput 
+          label="Password"
+          type="password"
+          placeholder="Choose a password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
 

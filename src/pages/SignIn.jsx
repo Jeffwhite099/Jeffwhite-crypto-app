@@ -45,7 +45,6 @@ function SignIn() {
     setError("");
     setIsSubmitting(true);
 
-    // Basic validation
     if (!formData.email || !formData.password) {
       setError("Please fill in all fields");
       setIsSubmitting(false);
@@ -53,7 +52,7 @@ function SignIn() {
     }
 
     try {
-      const response = await fetch("undefined", {
+      const response = await fetch("http://localhost:5000/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,12 +66,9 @@ function SignIn() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token in localStorage
         localStorage.setItem("token", data.token);
-        // Redirect to home page
         navigate("/");
       } else {
-        // Show error message
         setError(data.message || "Invalid email or password");
       }
     } catch (err) {
