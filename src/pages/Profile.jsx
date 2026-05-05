@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/common/LoadingScreen";
 
-// Connecting to the local node backend
-const API_URL = "http://localhost:5000";
+// Using proxy to connect to local node backend
 
 function Profile() {
   const navigate = useNavigate();
@@ -20,7 +19,7 @@ function Profile() {
 
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${API_URL}/auth/profile`, {
+        const response = await fetch(`/auth/profile`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }

@@ -5,70 +5,20 @@ import { getDb } from '../config/database.js';
 
 const router = express.Router();
 
-/**
- * @openapi
- * /auth/signup:
- *   post:
- *     tags:
- *       - Authentication
- *     summary: Register a new user
- *     description: Creates a new user account with email and password. Returns JWT token and user details.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: john.doe@example.com
- *               password:
- *                 type: string
- *                 format: password
- *                 minLength: 6
- *                 example: securepassword123
- *               name:
- *                 type: string
- *                 description: Optional user name (defaults to email prefix)
- *                 example: John Doe
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
- *       400:
- *         description: Bad request - missing fields or user already exists
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/signup', async (req, res) => {
+// Register endpoint (frontend expects /register)
+router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { name, email, password } = req.body;
     const db = getDb();
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ success: false, message: 'Please provide an email and password' });
     }
 
     // Check if user already exists
     const existingUser = await db.get('SELECT * FROM users WHERE email = ?', [email]);
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
     // Hash password
@@ -89,87 +39,36 @@ router.post('/signup', async (req, res) => {
     );
 
     res.status(201).json({
-      message: 'User created successfully',
+      success: true,
       token,
-      user: { id: result.lastID, email, name: name || email.split('@')[0] }
+      user: { id: result.lastID, name: name || email.split('@')[0], email }
     });
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ message: 'Server error during signup' });
+    console.error('Register error:', error);
+    res.status(500).json({ success: false, message: 'Server error during registration' });
   }
 });
 
-/**
- * @openapi
- * /auth/signin:
- *   post:
- *     tags:
- *       - Authentication
- *     summary: User login
- *     description: Authenticates user credentials and returns a JWT token for session management.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: john.doe@example.com
- *               password:
- *                 type: string
- *                 format: password
- *                 example: securepassword123
- *     responses:
- *       200:
- *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
- *       401:
- *         description: Invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       400:
- *         description: Bad request - missing fields
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/signin', async (req, res) => {
+// Login endpoint (frontend expects /login)
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const db = getDb();
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ success: false, message: 'Please provide an email and password' });
     }
 
     // Find user
     const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
     // Generate token
@@ -180,72 +79,51 @@ router.post('/signin', async (req, res) => {
     );
 
     res.json({
-      message: 'Login successful',
+      success: true,
       token,
-      user: { id: user.id, email: user.email, name: user.name }
+      user: { id: user.id, name: user.name, email: user.email }
     });
   } catch (error) {
-    console.error('Signin error:', error);
-    res.status(500).json({ message: 'Server error during signin' });
+    console.error('Login error:', error);
+    res.status(500).json({ success: false, message: 'Server error during login' });
   }
 });
 
-/**
- * @openapi
- * /auth/verify:
- *   get:
- *     tags:
- *       - Authentication
- *     summary: Verify JWT token
- *     description: Validates the provided JWT token and returns user information if valid.
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Token is valid
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   $ref: '#/components/schemas/User'
- *                 valid:
- *                   type: boolean
- *                   example: true
- *       401:
- *         description: Invalid or missing token
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/verify', async (req, res) => {
+// Profile endpoint (frontend expects /profile)
+router.get('/profile', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     const db = getDb();
-    const user = await db.get('SELECT id, email, name FROM users WHERE id = ?', [decoded.id]);
+    const user = await db.get('SELECT id, email, name, createdAt FROM users WHERE id = ?', [decoded.id]);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    res.json({ user, valid: true });
+    res.json({ success: true, data: user });
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token', valid: false });
+    res.status(401).json({ success: false, message: 'Not authorized, token failed' });
   }
+});
+
+// Legacy endpoints for backward compatibility
+router.post('/signup', async (req, res) => {
+  req.body.name = req.body.name || req.body.email?.split('@')[0];
+  return router.handle({ ...req, url: '/register', method: 'POST' }, res);
+});
+
+router.post('/signin', async (req, res) => {
+  return router.handle({ ...req, url: '/login', method: 'POST' }, res);
+});
+
+router.get('/verify', async (req, res) => {
+  return router.handle({ ...req, url: '/profile', method: 'GET' }, res);
 });
 
 export default router;

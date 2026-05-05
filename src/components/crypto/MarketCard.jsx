@@ -1,8 +1,13 @@
-import { useState } from "react";
-import { tradableCoins, topGainers, newCoins } from "../../data/marketData";
+import { useState, useEffect } from "react";
 
 function MarketCard() {
   const [activeTab, setActiveTab] = useState("new");
+  const [coinsData, setCoinsData] = useState({
+    tradable: [],
+    gainers: [],
+    new: []
+  });
+  const [loading, setLoading] = useState(true);
 
   const tabs = [
     { id: "tradable", label: "Tradable" },
@@ -10,13 +15,47 @@ function MarketCard() {
     { id: "new", label: "New on Coinbase" },
   ];
 
-  const getCoins = () => {
-    if (activeTab === "tradable") return tradableCoins;
-    if (activeTab === "gainers") return topGainers;
-    return newCoins;
-  };
+  useEffect(() => {
+    const fetchCryptoData = async () => {
+      setLoading(true);
+      try {
+        const [tradableRes, gainersRes, newRes] = await Promise.all([
+          fetch("/crypto"),
+          fetch("/crypto/gainers"),
+          fetch("/crypto/new")
+        ]);
 
-  const coins = getCoins();
+        const tradableData = await tradableRes.json();
+        const gainersData = await gainersRes.json();
+        const newData = await newRes.json();
+
+        // Helper to format backend data
+const formatCoins = (coins) => {
+           return coins.map(coin => ({
+             name: coin.name,
+             symbol: coin.symbol,
+             price: `GHS ${coin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+             change: coin.change24h === 0 ? "--" : (coin.change24h > 0 ? `↗ ${coin.change24h}%` : `↙ ${Math.abs(coin.change24h)}%`),
+             logo: coin.image || coin.logo // backend uses image, frontend uses logo
+           }));
+         };
+
+        setCoinsData({
+          tradable: tradableData.success ? formatCoins(tradableData.data).slice(0, 6) : [],
+          gainers: gainersData.success ? formatCoins(gainersData.data).slice(0, 6) : [],
+          new: newData.success ? formatCoins(newData.data).slice(0, 6) : []
+        });
+      } catch (error) {
+        console.error("Failed to fetch crypto data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCryptoData();
+  }, []);
+
+  const coins = coinsData[activeTab] || [];
 
   return (
     <div className="w-full max-w-[680px] rounded-[40px] bg-black px-10 py-9 text-white">

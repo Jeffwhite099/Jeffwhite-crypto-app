@@ -10,7 +10,7 @@ import specs from './swagger.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 
 // Initialize database
 initializeDatabase();
@@ -29,14 +29,14 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customCss: '.swagger-ui .topbar { display: none }',
 }));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/crypto', cryptoRoutes);
+// Routes - match frontend expectations (no /api prefix)
+app.use('/auth', authRoutes);
+app.use('/crypto', cryptoRoutes);
 
 // Health check
 /**
  * @openapi
- * /api/health:
+ * /auth/health:
  *   get:
  *     tags:
  *       - Health
@@ -57,7 +57,7 @@ app.use('/api/crypto', cryptoRoutes);
  *                   type: string
  *                   example: Backend is running
  */
-app.get('/api/health', (req, res) => {
+app.get('/auth/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });
 });
 
